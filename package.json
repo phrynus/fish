@@ -1,0 +1,22 @@
+{
+  "name": "app",
+  "version": "1.0.50",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "@types/md5": "^2.3.5",
+    "alipay-ftof": "^0.1.5",
+    "crypto-js": "^4.2.0",
+    "elysia": "latest",
+    "md5": "^2.3.0",
+    "mysql2": "^3.11.5",
+    "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "module": "src/index.js"
+}
