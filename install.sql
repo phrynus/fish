@@ -1,84 +1,171 @@
-/*
- Navicat Premium Data Transfer
+-- 管理员表
+-- CREATE TABLE admins (
+--     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '管理员唯一标识',
+--     username VARCHAR(150) NOT NULL UNIQUE COMMENT '管理员用户名',
+--     password CHAR(60) NOT NULL COMMENT '加密后的密码',
+--     email VARCHAR(255) NOT NULL UNIQUE COMMENT '邮箱地址',
+--     status TINYINT NOT NULL DEFAULT 1 COMMENT '管理员状态: 1(激活), 0(禁用)',
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+--     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+--     deleted_at TIMESTAMP DEFAULT NULL COMMENT '删除时间，NULL表示未删除',
+--     INDEX idx_email (email)
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='管理员表';
 
- Source Server         : 1
- Source Server Type    : MySQL
- Source Server Version : 50726 (5.7.26)
- Source Host           : localhost:3306
- Source Schema         : test
+-- 用户表
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '用户唯一标识',
+    username VARCHAR(150) NOT NULL UNIQUE COMMENT '用户名',
+    password CHAR(60) NOT NULL COMMENT '加密后的密码',
+    email VARCHAR(255) NOT NULL UNIQUE COMMENT '邮箱地址',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '用户状态: 1(激活), 0(禁用)',
+    reg_ip VARCHAR(45) DEFAULT NULL COMMENT '注册IP',
+    reg_mac VARCHAR(255) DEFAULT NULL COMMENT '注册设备',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted_at TIMESTAMP DEFAULT NULL COMMENT '删除时间，NULL表示未删除',
+    INDEX idx_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户表';
 
- Target Server Type    : MySQL
- Target Server Version : 50726 (5.7.26)
- File Encoding         : 65001
 
- Date: 10/12/2024 15:35:50
-*/
+-- 应用表
+CREATE TABLE apps (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '应用唯一标识',
+    name VARCHAR(150) NOT NULL UNIQUE COMMENT '应用名称',
+    description VARCHAR(500) DEFAULT NULL COMMENT '应用描述',
+    app_key CHAR(64) NOT NULL UNIQUE COMMENT '应用密钥',
+    is_status TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用应用', 
+    config JSON DEFAULT NULL COMMENT '应用全局配置（如注册开关、登录开关等）',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted_at TIMESTAMP DEFAULT NULL COMMENT '删除时间，NULL表示未删除'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='应用表';
 
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
+-- 应用_角色表
+CREATE TABLE apps_role (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '记录唯一标识',
+    app_id INT NOT NULL COMMENT '关联的应用ID',
+    role_id INT NOT NULL COMMENT '角色ID',
+    permissions TEXT DEFAULT NULL COMMENT '角色特权配置',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE,
+    INDEX idx_app_role (app_id, role_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='应用角色表';
 
--- ----------------------------
--- Table structure for app
--- ----------------------------
-DROP TABLE IF EXISTS `app`;
-CREATE TABLE `app`  (
-  `app_id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID\r\n',
-  `app_uuid` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'UUID 用于加密通讯',
-  `app_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '名称',
-  `app_logo` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'logo',
-  `app_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '描述',
-  `app_state` enum('on','off') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'on' COMMENT 'APP开关',
-  `app_off_msg` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT 'APP关闭消息',
-  `reg_state` enum('on','off') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'on' COMMENT '注册开关',
-  `reg_off_msg` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '注册关闭消息',
-  `reg_time_sn` int(13) NULL DEFAULT 86400000 COMMENT '机器码注册间隔时间',
-  `reg_time_ip` int(13) UNSIGNED NULL DEFAULT 86400000 COMMENT 'IP注册间隔时间',
-  `reg_award` enum('vip','fen') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'vip' COMMENT '注册奖励类型',
-  `reg_award_val` int(13) UNSIGNED NULL DEFAULT 604800000 COMMENT '注册奖励：vip/毫秒 1000*60*60*24*7',
-  `logon_state` enum('on','off') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'on' COMMENT '登录开关',
-  `logon_off_msg` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '登录关闭消息',
-  `logon_token_exp` int(13) NULL DEFAULT 3600000 COMMENT '用户token过期时间',
-  `logon_sn_dk` enum('on','off') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'off' COMMENT '用户设备多开',
-  `logon_sn_num` int(2) NULL DEFAULT 2 COMMENT '登录最大设备数',
-  `logon_sn_unbdeType` enum('vip','fen') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'vip' COMMENT '解绑扣除类型',
-  `logon_sn_unbdeVal` int(13) UNSIGNED NULL DEFAULT 3600000 COMMENT '解绑扣除值 vip/毫秒',
-  `invitee_award` enum('vip','fen') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'vip' COMMENT '受邀者奖励类型',
-  `invitee_award_val` int(13) NULL DEFAULT 604800000 COMMENT '受邀者奖励：vip/毫秒',
-  `inviter_award` enum('vip','fen') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'vip' COMMENT '邀请人奖励',
-  `inviter_award_val` int(13) UNSIGNED ZEROFILL NULL DEFAULT 0000604800000 COMMENT '邀请人奖励：vip/毫秒',
-  `diary_award` enum('vip','fen') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'fen' COMMENT '签到奖励类型',
-  `diary_award_val` int(13) NULL DEFAULT 10 COMMENT '签到奖励：vip/毫秒',
-  `smtp_state` enum('on','off') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'off' COMMENT '发信状态',
-  `smtp_host` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '邮箱服务器',
-  `smtp_user` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL DEFAULT NULL COMMENT '邮箱账户',
-  `smtp_pass` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '邮箱密码',
-  `smtp_port` int(6) NULL DEFAULT 465 COMMENT '邮箱端口',
-  `vc_time` int(2) NULL DEFAULT 10 COMMENT '验证码有效期 / 分钟',
-  `vc_length` int(1) UNSIGNED NULL DEFAULT 4 COMMENT '验证码长度',
-  PRIMARY KEY (`app_id`) USING BTREE
-) ENGINE = MyISAM AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
+-- 应用_版本表
+CREATE TABLE apps_version (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '记录唯一标识',
+    app_id INT NOT NULL COMMENT '关联的应用ID',
+    version VARCHAR(50) NOT NULL COMMENT '版本号',
+    description VARCHAR(255) DEFAULT NULL COMMENT '版本描述',
+    encryption JSON DEFAULT NULL COMMENT '加密配置',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '版本状态: 1(启用), 0(禁用)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE,
+    INDEX idx_app_version (app_id, version)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='应用版本表';
 
--- ----------------------------
--- Table structure for user
--- ----------------------------
-DROP TABLE IF EXISTS `user`;
-CREATE TABLE `user`  (
-  `uid` int(11) NOT NULL AUTO_INCREMENT,
-  `appid` int(11) NULL DEFAULT NULL COMMENT 'APP ID',
-  `uuid` varchar(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'UUID',
-  `account` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '账号',
-  `password` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '密码 SHA256',
-  `avatars` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '头像',
-  `vip` int(13) NULL DEFAULT 0 COMMENT 'VIP',
-  `fen` int(13) NULL DEFAULT 0 COMMENT '分',
-  `inviter_uid` int(36) NULL DEFAULT NULL COMMENT '邀请人ID',
-  `reg_time` int(13) NULL DEFAULT NULL COMMENT '注册时间',
-  `reg_ip` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '注册IP',
-  `reg_sn` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '注册机器码',
-  `sn_list` json NULL COMMENT '当前账号机器码',
-  `ban` enum('on','off') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'off' COMMENT '封禁',
-  `ban_msg` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '封禁理由',
-  PRIMARY KEY (`uid`) USING BTREE
-) ENGINE = MyISAM AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
+-- 应用_商品表
+CREATE TABLE apps_products (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '商品唯一标识',
+    app_id INT NOT NULL COMMENT '关联的应用ID',
+    name VARCHAR(150) NOT NULL COMMENT '商品名称',
+    description TEXT DEFAULT NULL COMMENT '商品描述',
+    price DECIMAL(15, 2) NOT NULL COMMENT '商品价格',
+    stock INT DEFAULT 0 COMMENT '库存数量',
+    type TINYINT NOT NULL DEFAULT 1 COMMENT '商品类型: 1(角色), 2(积分), 3(机器码), 4(卡密)',
+    config JSON DEFAULT NULL COMMENT '商品配置',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE,
+    INDEX idx_app_product (app_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='应用商品表';
 
-SET FOREIGN_KEY_CHECKS = 1;
+-- 应用_支付方式表
+CREATE TABLE apps_payment_methods (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '支付方式唯一标识',
+    app_id INT NOT NULL COMMENT '关联的应用ID',
+    name VARCHAR(150) NOT NULL COMMENT '支付方式名称',
+    config JSON DEFAULT NULL COMMENT '支付方式配置（如：API密钥、回调地址等）',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted_at TIMESTAMP DEFAULT NULL COMMENT '删除时间，NULL表示未删除',
+    FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE,
+    UNIQUE KEY idx_app_name (app_id, name) COMMENT '应用ID与支付方式名称的联合唯一约束'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='支付方式表';
+
+
+-- 应用_订单表
+CREATE TABLE apps_orders (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '订单唯一标识',
+    order_no VARCHAR(100) NOT NULL UNIQUE COMMENT '订单号',
+    app_id INT NOT NULL COMMENT '关联的应用ID',
+    user_id INT NOT NULL COMMENT '关联的用户ID',
+    product_id INT NOT NULL COMMENT '关联的商品ID',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '订单状态: 1(待支付), 2(已支付), 3(已取消)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES apps_products(id) ON DELETE CASCADE,
+    INDEX idx_order_user (app_id, user_id),
+    INDEX idx_product (product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='应用订单表';
+
+-- 应用_卡密模版表
+CREATE TABLE apps_card_type (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '卡密模版唯一标识',
+    app_id INT NOT NULL COMMENT '应用ID',
+    name VARCHAR(150) NOT NULL COMMENT '卡密模版名称',
+    description TEXT DEFAULT NULL COMMENT '卡密模版描述',
+    type TINYINT NOT NULL DEFAULT 1 COMMENT '卡密模版类型: 1(角色), 2(积分), 3(机器码)',
+    config JSON DEFAULT NULL COMMENT '卡密模版配置（JSON格式）',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted_at TIMESTAMP DEFAULT NULL COMMENT '删除时间，NULL表示未删除',
+    FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE,
+    INDEX idx_app_type (app_id, type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='卡密模版表';
+
+-- 应用_卡密表
+CREATE TABLE apps_cards (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '卡密唯一标识',
+    app_id INT NOT NULL COMMENT '关联的应用ID',
+    card_type_id INT NOT NULL COMMENT '卡密模版ID',
+    card_no CHAR(64) NOT NULL UNIQUE COMMENT '卡密号',
+    remark TEXT DEFAULT NULL COMMENT '备注信息',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '卡密状态: 1(未使用), 2(已使用), 3(已过期)',
+    expire_at TIMESTAMP DEFAULT NULL COMMENT '到期时间',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted_at TIMESTAMP DEFAULT NULL COMMENT '删除时间，NULL表示未删除',
+    FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE,
+    FOREIGN KEY (card_type_id) REFERENCES apps_card_type(id) ON DELETE CASCADE,
+    INDEX idx_card_app_type (app_id, card_type_id),
+    INDEX idx_card_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='卡密表';
+
+
+-- 用户_应用内容表
+CREATE TABLE users_apps_config (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '记录唯一标识',
+    app_id INT NOT NULL COMMENT '关联的应用ID',
+    user_id INT NOT NULL COMMENT '关联的用户ID',
+    user_role_id INT NOT NULL COMMENT '关联的角色ID',
+    points INT DEFAULT 0 COMMENT '用户积分余额',
+    inviter_id INT DEFAULT NULL COMMENT '邀请人用户ID',
+    role_expire TIMESTAMP DEFAULT NULL COMMENT '角色到期时间',
+    app_status TINYINT NOT NULL DEFAULT 1 COMMENT '当前APP用户状态: 1(激活), 0(禁用)',
+    mac_bind JSON DEFAULT NULL COMMENT '绑定的设备信息（JSON格式：设备ID数组,最大绑定数量）',
+    custom JSON DEFAULT NULL COMMENT '用户自定义字段',
+    login_at TIMESTAMP DEFAULT NULL COMMENT '最近登录时间',
+    login_ip CHAR(45) DEFAULT NULL COMMENT '登录IP',
+    login_mac VARCHAR(255) DEFAULT NULL COMMENT '登录设备',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted_at TIMESTAMP DEFAULT NULL COMMENT '删除时间，NULL表示未删除',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE,
+    INDEX idx_user_app (user_id, app_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户应用内容表';
