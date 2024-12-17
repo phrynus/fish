@@ -1,29 +1,68 @@
 import { mysql, sqlite } from "@/config";
 
 type Apptype = {
-  name: string;
-  description: string;
-  app_key: string;
-  is_status: boolean;
-  config: any;
+  name?: string;
+  description?: string;
+  app_key?: string;
+  is_status?: number;
+  config?: any;
 };
 type Userstype = {
-  username: string;
-  password: string;
-  email: string;
-  status: number;
-  reg_ip: any;
-  reg_mac: any;
+  username?: string;
+  password?: string;
+  email?: string;
+  status?: number;
+  reg_ip?: any;
+  reg_mac?: any;
 };
+
+// 不合规SQL的正则表达式
+const sqlPatterns: { pattern: RegExp; message: string }[] = [
+  { pattern: /\bDROP\s+TABLE\b/i, message: "禁止使用 DROP TABLE" },
+  { pattern: /\bDELETE\s+FROM\b\s+\w+\s*(?!WHERE)/i, message: "DELETE 语句缺少 WHERE 子句" },
+  { pattern: /\bTRUNCATE\s+TABLE\b/i, message: "禁止使用 TRUNCATE TABLE" },
+  { pattern: /(--|\bOR\b|\bAND\b)\s+.+\s*=\s*.+/i, message: "可能存在简单 SQL 注入" },
+  { pattern: /\bINFORMATION_SCHEMA\b/i, message: "禁止访问系统表 INFORMATION_SCHEMA" },
+  { pattern: /;\s*--/, message: "检测到分号后包含注释，可能存在 SQL 注入" },
+  { pattern: /(UNION\s+SELECT|INSERT\s+INTO\s+\w+\s+VALUES\s*\(.*\)\s*;)/i, message: "可能存在复杂 SQL 注入" }
+];
+
 // 通用的 SQL 执行方法
 async function executeQuery<T>(sql: string, params: any[] = []): Promise<T | null> {
   try {
+    // 检查 SQL 语句是否合规
+    sqlPatterns.forEach(({ pattern, message }) => {
+      if (pattern.test(sql)) throw new Error(message);
+    });
     const [result] = await mysql.execute(sql, params);
     return result as T;
   } catch (error: any) {
     console.error(`SQL Error: ${error.message}`, { sql, params });
-    throw error.message;
+    throw new Error(`SQL Execution Failed: ${error.message}`);
   }
+}
+// 通用的更新方法
+async function dynamicUpdate<T>(
+  tableName: string,
+  id: string,
+  data: Partial<T>,
+  allowedFields: string[]
+): Promise<unknown | null> {
+  const fields: string[] = [];
+  const params: any[] = [];
+
+  for (const [key, value] of Object.entries(data)) {
+    if (allowedFields.includes(key) && value !== undefined) {
+      fields.push(`${key} = ?`);
+      params.push(value);
+    }
+  }
+
+  if (fields.length === 0) return null;
+
+  const sql = `UPDATE ${tableName} SET ${fields.join(", ")} WHERE id = ?`;
+  params.push(id);
+  return await executeQuery(sql, params);
 }
 
 export const mysqlModels = {
@@ -35,18 +74,16 @@ export const mysqlModels = {
       const result = await executeQuery(sql, params);
       return result || null;
     },
-    async delete(app_id: number): Promise<unknown | null> {
+    async delete(app_id: string): Promise<unknown | null> {
       const sql = `DELETE FROM ${this.name} WHERE id = ?`;
       const result = await executeQuery(sql, [app_id]);
       return result || null;
     },
-    async update(app_id: number, app: Apptype): Promise<unknown | null> {
-      const sql = `UPDATE ${this.name} SET name = ?, description = ?, app_key = ?, is_status = ?, config = ? WHERE id = ?`;
-      const params = [app.name, app.description, app.app_key, app.is_status, app.config, app_id];
-      const result = await executeQuery(sql, params);
-      return result || null;
+    async update(app_id: string, app: Apptype): Promise<unknown | null> {
+      const allowedFields = ["name", "description", "app_key", "is_status", "config"];
+      return await dynamicUpdate(this.name, app_id, app, allowedFields);
     },
-    async getId(app_id: number): Promise<Apptype | null> {
+    async getId(app_id: string): Promise<Apptype | null> {
       const sql = `SELECT * FROM ${this.name} WHERE id = ?`;
       const result = await executeQuery<Apptype[]>(sql, [app_id]);
       return result?.[0] || null;
@@ -56,9 +93,15 @@ export const mysqlModels = {
       const result = await executeQuery<Apptype[]>(sql, [app_key]);
       return result?.[0] || null;
     },
-    async getAll(num: number = 10, page: number = 0): Promise<Apptype[] | null> {
+    async getAll(num: number = 10, page: number = 1): Promise<Apptype[] | null> {
+      const offset = (page - 1) * num;
       const sql = `SELECT * FROM ${this.name} LIMIT ? OFFSET ?`;
-      const result = await executeQuery<Apptype[]>(sql, [num, page]);
+      const result = await executeQuery<Apptype[]>(sql, [String(num), String(offset)]);
+      return result || null;
+    },
+    async sql(select: string[], query: string): Promise<Userstype[] | null> {
+      const sql = `SELECT ${select.join(", ")} FROM ${this.name} ${query}`;
+      const result = await executeQuery<Userstype[]>(sql);
       return result || null;
     }
   },
@@ -69,6 +112,41 @@ export const mysqlModels = {
       const params = [user.username, user.password, user.email, user.status, user.reg_ip, user.reg_mac];
       const result = await executeQuery<{ insertId: number }>(sql, params);
       return result?.insertId || null;
+    },
+    async delete(user_id: string): Promise<unknown | null> {
+      const sql = `DELETE FROM ${this.name} WHERE id = ?`;
+      const result = await executeQuery(sql, [user_id]);
+      return result || null;
+    },
+    async update(user_id: string, user: Userstype): Promise<unknown | null> {
+      const allowedFields = ["username", "password", "email", "status", "reg_ip", "reg_mac"];
+      return await dynamicUpdate(this.name, user_id, user, allowedFields);
+    },
+    async getId(user_id: string): Promise<Userstype | null> {
+      const sql = `SELECT * FROM ${this.name} WHERE id = ?`;
+      const result = await executeQuery<Userstype[]>(sql, [user_id]);
+      return result?.[0] || null;
+    },
+    async getAll(num: number = 10, page: number = 1): Promise<Userstype[] | null> {
+      const offset = (page - 1) * num;
+      const sql = `SELECT * FROM ${this.name} LIMIT ? OFFSET ?`;
+      const result = await executeQuery<Userstype[]>(sql, [String(num), String(offset)]);
+      return result || null;
+    },
+    async getEmail(email: string): Promise<Userstype | null> {
+      const sql = `SELECT * FROM ${this.name} WHERE email = ?`;
+      const result = await executeQuery<Userstype[]>(sql, [email]);
+      return result?.[0] || null;
+    },
+    async getUsername(username: string): Promise<Userstype | null> {
+      const sql = `SELECT * FROM ${this.name} WHERE username = ?`;
+      const result = await executeQuery<Userstype[]>(sql, [username]);
+      return result?.[0] || null;
+    },
+    async sql(select: string[], query: string): Promise<Userstype[] | null> {
+      const sql = `SELECT ${select.join(", ")} FROM ${this.name} ${query}`;
+      const result = await executeQuery<Userstype[]>(sql);
+      return result || null;
     }
   }
 };

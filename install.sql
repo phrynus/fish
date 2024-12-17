@@ -15,7 +15,7 @@
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '用户唯一标识',
     username VARCHAR(150) NOT NULL UNIQUE COMMENT '用户名',
-    password CHAR(60) NOT NULL COMMENT '加密后的密码',
+    password CHAR(64) NOT NULL COMMENT '加密后的密码 SHA256',
     email VARCHAR(255) NOT NULL UNIQUE COMMENT '邮箱地址',
     status TINYINT NOT NULL DEFAULT 1 COMMENT '用户状态: 1(激活), 0(禁用)',
     reg_ip VARCHAR(45) DEFAULT NULL COMMENT '注册IP',
@@ -32,7 +32,7 @@ CREATE TABLE apps (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '应用唯一标识',
     name VARCHAR(150) NOT NULL UNIQUE COMMENT '应用名称',
     description VARCHAR(500) DEFAULT NULL COMMENT '应用描述',
-    app_key CHAR(64) NOT NULL UNIQUE COMMENT '应用密钥',
+    app_key CHAR(64) NOT NULL UNIQUE COMMENT '应用密钥 SHA256',
     is_status TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用应用', 
     config JSON DEFAULT NULL COMMENT '应用全局配置（如注册开关、登录开关等）',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
