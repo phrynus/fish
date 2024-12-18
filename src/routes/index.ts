@@ -1,15 +1,15 @@
 import { Elysia } from "elysia";
-import appRouter from "./app";
+import { swagger } from "@elysiajs/swagger";
+import { ip } from "elysia-ip";
+
 import apiRouter from "./api";
+import adminRouter from "./admin";
+
 const app = new Elysia();
-class Logger {
-  log(value: string) {
-    console.log(value);
-  }
-}
 export default () => {
-  app.decorate("logger", new Logger());
-  app.use(appRouter);
+  app.use(swagger());
+  app.use(ip());
+  app.use(adminRouter);
   app.use(apiRouter);
   app.all("*", async () => {
     return new Response("© Github Phrynus", { status: 404 });

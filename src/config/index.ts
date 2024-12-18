@@ -1,5 +1,6 @@
 import mysql2 from "mysql2/promise";
 import { Database } from "bun:sqlite";
+import speakeasy from "speakeasy";
 try {
   const envs = ["MYSQL_HOST", "MYSQL_PORT", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE"];
   envs.forEach((env) => {
@@ -35,4 +36,15 @@ await mysql
 const sqlite = new Database("data/db.sqlite");
 sqlite.exec("PRAGMA journal_mode = WAL;");
 
-export { mysql, sqlite };
+// sqlite 检查是否有表
+let table = sqlite.query(`SELECT name FROM sqlite_master WHERE type='table' AND name='user_admin'`).all();
+if (!table.length) {
+  sqlite.exec(
+    `CREATE TABLE user_admin ( id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, ascii TEXT NOT NULL, hex TEXT NOT NULL, base32 TEXT NOT NULL, otpauth_url TEXT NOT NULL );`
+  );
+}
+
+// totp
+const secret = speakeasy.generateSecret({ length: 20 });
+
+export { mysql, sqlite, secret };
