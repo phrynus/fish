@@ -11,7 +11,7 @@ import apps_products from "./apps_products";
 import apps_version from "./apps_version";
 import { jwt } from "@elysiajs/jwt";
 
-export default new Elysia({ prefix: "/admin_ncnrfr" })
+export default new Elysia({ prefix: "/admin" })
   .use(
     jwt({
       name: "acc",
@@ -31,7 +31,7 @@ export default new Elysia({ prefix: "/admin_ncnrfr" })
     const refresh_token = await ctx.ref.sign({});
     return { access_token, refresh_token };
   })
-  .post("/refresh_zpsumb", async (ctx) => {
+  .post("/ref", async (ctx) => {
     let { refresh_token } = ctx.query;
     if (!(await ctx.ref.verify(refresh_token))) {
       throw new Error("Invalid refresh token");
@@ -50,7 +50,6 @@ export default new Elysia({ prefix: "/admin_ncnrfr" })
     if (!(await acc.verify(access_token))) {
       throw new Error("Invalid access token");
     }
-    console.log(access_token, await acc.verify(access_token));
   })
   .use(users)
   .use(apps)

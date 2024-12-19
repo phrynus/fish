@@ -1,6 +1,8 @@
 import mysql2 from "mysql2/promise";
 import { Database } from "bun:sqlite";
 import speakeasy from "speakeasy";
+import fs from "fs";
+import path from "path";
 try {
   const envs = ["MYSQL_HOST", "MYSQL_PORT", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE"];
   envs.forEach((env) => {
@@ -45,6 +47,13 @@ if (!table.length) {
 }
 
 // totp
-const secret = speakeasy.generateSecret({ length: 20 });
+const secretFile = Bun.file("src/config/secret.json");
+let secret: any = speakeasy.generateSecret({ length: 20 });
+if (secretFile.size == 0) {
+  await Bun.write("src/config/secret.json", JSON.stringify(secret, null, 2));
+} else {
+  secret = await secretFile.json();
+}
+secret.is = secret.is ? true : false; // 是否启用
 
 export { mysql, sqlite, secret };
