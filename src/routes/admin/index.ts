@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import speakeasy from "speakeasy";
 
@@ -14,8 +14,13 @@ import apps_orders from "./apps_orders";
 import apps_payment_methods from "./apps_payment_methods";
 import apps_products from "./apps_products";
 import apps_version from "./apps_version";
+// 400: 请求错误
+// 401: 未登录
+// 403: 无权限
+// 404: 路由不存在
+// 500: 服务器错误
 
-export default new Elysia({ prefix: `/admin_${secret.hex.slice(0, 6)}` })
+export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
   .use(
     jwt({
       name: "acc",
@@ -30,54 +35,82 @@ export default new Elysia({ prefix: `/admin_${secret.hex.slice(0, 6)}` })
       exp: "7d"
     })
   ) //log
-  .post("/login", async (ctx) => {
-    try {
-      const access_token = await ctx.acc.sign({});
-      const refresh_token = await ctx.ref.sign({});
-      if (secret.is_login) {
-        let { key } = ctx.query;
-        if (!key) throw new Error("秘钥为空");
-        const verified = speakeasy.totp.verify({
-          secret: secret.base32,
-          encoding: "base32",
-          token: key,
-          window: 1
+  .post(
+    "/login",
+    async (ctx) => {
+      try {
+        const access_token = await ctx.acc.sign({});
+        const refresh_token = await ctx.ref.sign({});
+        if (secret.is_login) {
+          console.log(ctx);
+          let { key } = ctx.query;
+          const verified = speakeasy.totp.verify({
+            secret: secret.base32,
+            encoding: "base32",
+            token: key,
+            window: 1
+          });
+          if (!verified) return ctx.error(400, "验证失败");
+        } else {
+          sqlite.query("UPDATE user_admin SET is_login = 1 WHERE id = 1").run();
+          secret.is_login = 1;
+          return { access_token, refresh_token, otpauth_url: secret.otpauth_url };
+        }
+        return { access_token, refresh_token };
+      } catch (error) {
+        console.error(error);
+
+        throw error;
+      }
+    },
+    {
+      query: t.Object({
+        key: t.String()
+      }),
+      response: {
+        200: t.Object({
+          access_token: t.String(),
+          refresh_token: t.String()
+        }),
+        400: t.String()
+      }
+    }
+  )
+  .post(
+    "/ref",
+    async (ctx) => {
+      try {
+        let { token } = ctx.query;
+        if (!(await ctx.ref.verify(token))) {
+          return ctx.error(400, "TOKEN验证失败");
+        }
+        const access_token = await ctx.acc.sign({
+          id: 1,
+          username: "admin"
         });
-        if (!verified) throw new Error("验证失败");
-      } else {
-        sqlite.query("UPDATE user_admin SET is_login = 1 WHERE id = 1").run();
-        secret.is_login = 1;
-        return { access_token, refresh_token, otpauth_url: secret.otpauth_url };
+        return { access_token, refresh_token: token };
+      } catch (error) {
+        throw error;
       }
-      return { access_token, refresh_token };
-    } catch (error) {
-      throw error;
+    },
+    {
+      query: t.Object({
+        token: t.String()
+      }),
+      response: {
+        200: t.Object({
+          access_token: t.String(),
+          refresh_token: t.String()
+        }),
+        400: t.String()
+      }
     }
-  })
-  .post("/ref", async (ctx) => {
+  )
+  .onBeforeHandle(async (ctx) => {
     try {
-      let { refresh_token } = ctx.query;
-      if (!(await ctx.ref.verify(refresh_token))) {
-        throw new Error("Invalid refresh token");
-      }
-      const access_token = await ctx.acc.sign({
-        id: 1,
-        username: "admin"
-      });
-      return { access_token, refresh_token };
-    } catch (error) {
-      throw error;
-    }
-  })
-  .onBeforeHandle(async ({ headers, acc }) => {
-    try {
-      const { access_token } = headers;
-      if (!access_token) {
-        throw new Error("Missing access token");
-      }
-      if (!(await acc.verify(access_token))) {
-        throw new Error("Invalid access token");
-      }
+      const { Authorization } = ctx.headers;
+      const verify = await ctx.acc.verify(Authorization);
+      if (!verify) return ctx.error(401, "TOKEN验证失败");
     } catch (error) {
       throw error;
     }
