@@ -48,4 +48,5 @@ data/db.sqlite-wal
 /.idea/
 /.idea/web/.idea/
 /.idea/web/.idea/.gitignore
-
+bun.lockb
+.vscode
