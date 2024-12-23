@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import speakeasy from "speakeasy";
+import QRCode from "qrcode";
 
 import { secret, sqlite } from "@/config";
 
@@ -39,10 +40,10 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
     "/login",
     async (ctx) => {
       try {
-        const access_token = await ctx.acc.sign({});
-        const refresh_token = await ctx.ref.sign({});
+        const access = await ctx.acc.sign({});
+        const refresh = await ctx.ref.sign({});
+        let qr = "";
         if (secret.is_login) {
-          console.log(ctx);
           let { key } = ctx.query;
           const verified = speakeasy.totp.verify({
             secret: secret.base32,
@@ -54,12 +55,10 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
         } else {
           sqlite.query("UPDATE user_admin SET is_login = 1 WHERE id = 1").run();
           secret.is_login = 1;
-          return { access_token, refresh_token, otpauth_url: secret.otpauth_url };
+          qr = await QRCode.toDataURL(secret.otpauth_url, {});
         }
-        return { access_token, refresh_token };
+        return { access, refresh, qr };
       } catch (error) {
-        console.error(error);
-
         throw error;
       }
     },
@@ -69,8 +68,9 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
       }),
       response: {
         200: t.Object({
-          access_token: t.String(),
-          refresh_token: t.String()
+          access: t.String(),
+          refresh: t.String(),
+          qr: t.String()
         }),
         400: t.String()
       }

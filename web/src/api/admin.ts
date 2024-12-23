@@ -2,7 +2,7 @@ import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig 
 
 //创建axios实例
 const axiosAdmin: AxiosInstance = axios.create({
-  baseURL: "http://127.0.0.1:3015/547851",
+  baseURL: "http://127.0.0.1:3015/64313a",
   //超时时间
   timeout: 5000
 });

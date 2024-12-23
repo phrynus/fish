@@ -16,8 +16,10 @@
     "crypto-js": "^4.2.0",
     "elysia": "latest",
     "elysia-ip": "^1.0.8",
+    "logestic": "^1.2.4",
     "md5": "^2.3.0",
     "mysql2": "^3.11.5",
+    "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0",
     "totp-generator": "^1.0.0",
     "uuid": "^11.0.3"
