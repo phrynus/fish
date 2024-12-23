@@ -44,3 +44,8 @@ package-lock.json
 src/config/secret.json
 data/db.sqlite-shm
 data/db.sqlite-wal
+.idea
+/.idea/
+/.idea/web/.idea/
+/.idea/web/.idea/.gitignore
+
