@@ -15,11 +15,6 @@ import apps_orders from "./apps_orders";
 import apps_payment_methods from "./apps_payment_methods";
 import apps_products from "./apps_products";
 import apps_version from "./apps_version";
-// 400: 请求错误
-// 401: 未登录
-// 403: 无权限
-// 404: 路由不存在
-// 500: 服务器错误
 
 export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
   .use(
@@ -40,8 +35,6 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
     "/login",
     async (ctx) => {
       try {
-        const access = await ctx.acc.sign({});
-        const refresh = await ctx.ref.sign({});
         let qr = "";
         if (secret.is_login) {
           let { key } = ctx.query;
@@ -57,6 +50,8 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
           secret.is_login = 1;
           qr = await QRCode.toDataURL(secret.otpauth_url, {});
         }
+        const access = await ctx.acc.sign({});
+        const refresh = await ctx.ref.sign({});
         return { access, refresh, qr };
       } catch (error) {
         throw error;
