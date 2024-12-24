@@ -42,6 +42,7 @@ package-lock.json
 **/*.bun
 .env
 src/config/secret.json
+data/db.sqlite
 data/db.sqlite-shm
 data/db.sqlite-wal
 .idea
