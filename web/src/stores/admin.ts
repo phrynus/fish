@@ -11,9 +11,11 @@ export const useAdminStore = defineStore(
       }
       return null;
     };
+
     const access_token = ref<string | null>(null);
-    const access_exp = computed(() => getTokenPayload(access_token, "exp") * 1000);
     const refresh_token = ref<string | null>(null);
+
+    const access_exp = computed(() => getTokenPayload(access_token, "exp") * 1000);
     const refresh_exp = computed(() => getTokenPayload(refresh_token, "exp") * 1000);
 
     return { access_token, refresh_token, access_exp, refresh_exp };

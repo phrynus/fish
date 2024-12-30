@@ -4,6 +4,7 @@ import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 
 import { secret, sqlite } from "@/config";
+import routerH from "@/utils/routerH";
 
 import users from "./users";
 import users_apps_config from "./users_apps_config";
@@ -44,7 +45,7 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
             token: key,
             window: 1
           });
-          if (!verified) return ctx.error(400, "验证失败");
+          if (!verified) throw routerH.run(400);
         } else {
           sqlite.query("UPDATE user_admin SET is_login = 1 WHERE id = 1").run();
           secret.is_login = 1;
@@ -52,7 +53,11 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
         }
         const access = await ctx.acc.sign({});
         const refresh = await ctx.ref.sign({});
-        return { access, refresh, qr };
+        return routerH.run({
+          access,
+          refresh,
+          qr
+        });
       } catch (error) {
         throw error;
       }
@@ -63,11 +68,16 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
       }),
       response: {
         200: t.Object({
-          access: t.String(),
-          refresh: t.String(),
-          qr: t.String()
+          code: t.Number(),
+          msg: t.String(),
+          data: t.Object({
+            access: t.String(),
+            refresh: t.String(),
+            qr: t.String()
+          })
         }),
-        400: t.String()
+        500: routerH.error,
+        400: routerH.error
       }
     }
   )
@@ -77,13 +87,13 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
       try {
         let { token } = ctx.query;
         if (!(await ctx.ref.verify(token))) {
-          return ctx.error(400, "TOKEN验证失败");
+          return routerH.run(400);
         }
-        const access_token = await ctx.acc.sign({
+        const access = await ctx.acc.sign({
           id: 1,
           username: "admin"
         });
-        return { access_token, refresh_token: token };
+        return routerH.run({ access, refresh: token });
       } catch (error) {
         throw error;
       }
@@ -94,10 +104,15 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
       }),
       response: {
         200: t.Object({
-          access_token: t.String(),
-          refresh_token: t.String()
+          code: t.Number(),
+          msg: t.String(),
+          data: t.Object({
+            access: t.String(),
+            refresh: t.String()
+          })
         }),
-        400: t.String()
+        500: routerH.error,
+        400: routerH.error
       }
     }
   )
@@ -110,13 +125,13 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
       throw error;
     }
   })
-  .use(users)
   .use(apps)
-  .use(users_apps_config)
   .use(apps_role)
-  .use(apps_card_type)
   .use(apps_cards)
   .use(apps_orders)
-  .use(apps_payment_methods)
+  .use(apps_version)
   .use(apps_products)
-  .use(apps_version);
+  .use(apps_card_type)
+  .use(apps_payment_methods)
+  .use(users)
+  .use(users_apps_config);

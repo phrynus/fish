@@ -19,8 +19,14 @@ const router = createRouter({
 });
 router.beforeEach((to, from, next) => {
   const adminStore = useAdminStore();
-  // exp 过期时间
-  if (to.path !== "/login" && adminStore.access_exp < Date.now()) next("/login");
+  if (to.path !== "/login" && adminStore.access_exp < Date.now()) {
+    adminStore.access_token = "";
+    adminStore.refresh_token = "";
+    next("/login");
+  } else if (to.path == "/login") {
+    adminStore.access_token = "";
+    adminStore.refresh_token = "";
+  }
   next();
 });
 

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAdminStore } from "@/stores/admin";
 import { ElLoading, ElMessage, ElMessageBox } from "element-plus";
@@ -7,78 +7,76 @@ import axiosAdmin from "@/api/admin";
 
 const router = useRouter();
 const adminStore = useAdminStore();
-if (adminStore.access_exp > Date.now()) router.push("/");
-const LoginKeyInput = ref("");
-const KeyInput = ref<null | any>(null);
-// 判断是否有焦点
+
+// 检查登录状态
+if (adminStore.access_exp > Date.now()) {
+  router.push("/");
+}
+
+// 登录输入相关状态
+const loginKeyInput = ref<string>("");
+const loginKeyInputLength = computed(() => {
+  let v = loginKeyInput.value + "";
+  return v.length;
+});
+const keyInputRef = ref<HTMLInputElement | null>(null);
 const hasFocus = ref(false);
-// 判断是否输入完成
-const isComplete = ref(false);
 
 const handleLogin = async () => {
-  if (!isComplete.value) {
-    isComplete.value = true;
-    const loadingInstance = ElLoading.service({});
-    await axiosAdmin
-      .post(
-        "/login",
-        {},
-        {
-          params: {
-            key: LoginKeyInput.value
-          }
-        }
-      )
-      .then((res) => {
-        if (res.data.qr) {
-          ElMessageBox.confirm(`<img src="${res.data.qr}" style='width: 100%;height: 100%;' />`, "", {
-            dangerouslyUseHTMLString: true,
-            showClose: false,
-            showCancelButton: false,
-            showConfirmButton: false,
-            customClass: "qr-code-box",
-            callback: () => {
-              adminStore.access_token = res.data.access;
-              adminStore.refresh_token = res.data.refresh;
-              LoginKeyInput.value = "";
-              loadingInstance.close();
-              router.push("/");
-            }
-          });
-        } else {
-          adminStore.access_token = res.data.access;
-          adminStore.refresh_token = res.data.refresh;
-          LoginKeyInput.value = "";
-          loadingInstance.close();
-          router.push("/");
-        }
-      })
-      .catch((err) => {
-        console.log(err);
+  const loadingInstance = ElLoading.service();
+  try {
+    const response = await axiosAdmin.post("/login", { key: loginKeyInput.value });
+    const data = response.data.data;
 
-        LoginKeyInput.value = "";
-        ElMessage.error(err.response);
-        loadingInstance.close();
+    if (data.qr) {
+      await ElMessageBox.confirm(`<img src="${data.qr}" style="width: 100%; height: 100%;" />`, "", {
+        dangerouslyUseHTMLString: true,
+        showClose: false,
+        showCancelButton: false,
+        showConfirmButton: false,
+        customClass: "login-qr-code-box"
       });
-    isComplete.value = false;
+    } else {
+      adminStore.access_token = data.access;
+      adminStore.refresh_token = data.refresh;
+      loginKeyInput.value = "";
+      ElMessage.success("欢迎回来");
+      router.push("/");
+    }
+  } catch (err: any) {
+    loginKeyInput.value = "";
+    keyInputRef.value?.focus();
+    ElMessage.error(err.response?.data?.msg || "登录失败，请稍后重试");
+  } finally {
+    loadingInstance.close();
   }
 };
 
 onMounted(() => {
-  KeyInput.value.focus();
-  watch(LoginKeyInput, (newVal) => {
-    let val = newVal + "";
-    if (val.length >= 6) {
-      KeyInput.value.blur();
+  // 设置输入框初始焦点
+  keyInputRef.value?.focus();
+
+  // 监听输入内容变化
+  watch(loginKeyInput, (newVal) => {
+    let v = loginKeyInput.value + "";
+    if (v.length >= 6) {
+      keyInputRef.value?.blur();
       handleLogin();
     }
   });
 });
 </script>
+
 <template>
   <div class="LoginView">
     <div class="container">
-      <input type="number" @focus="hasFocus = true" @blur="hasFocus = false" ref="KeyInput" v-model="LoginKeyInput" />
+      <input
+        type="number"
+        ref="keyInputRef"
+        v-model="loginKeyInput"
+        @focus="hasFocus = true"
+        @blur="hasFocus = false"
+      />
       <div class="line">
         <div></div>
         <div></div>
@@ -89,9 +87,11 @@ onMounted(() => {
       <div class="span">
         <div
           v-for="i in 6"
-          :class="
-            (LoginKeyInput + '').length >= i ? 'active' : (LoginKeyInput + '').length + 1 == i && hasFocus ? 'on ' : ''
-          "
+          :key="i"
+          :class="{
+            active: loginKeyInputLength >= i,
+            on: loginKeyInputLength === i - 1 && hasFocus
+          }"
         ></div>
       </div>
     </div>
@@ -185,7 +185,7 @@ onMounted(() => {
 }
 </style>
 <style lang="scss" scoped>
-.qr-code-box {
+.login-qr-code-box {
   max-width: 240px;
   .el-message-box__header,
   .el-message-box__btns {
