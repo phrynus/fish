@@ -87,7 +87,7 @@ if (table.length < 1) {
     } catch (error) {
       console.error("清理过期key失败:", error);
     }
-  }, 1000 * 60 * 10); //每分钟执行一次
+  }, 1000 * 60 * 30); //每分钟执行一次
 })();
 // totp
 const secret: any = sqlite.query(`SELECT * FROM user_admin WHERE id=1`).get();
