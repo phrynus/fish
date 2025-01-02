@@ -37,8 +37,7 @@ export default () => {
   +#+             +#+    +#+       +#+    +#+      +#+          +#+  +#+#+#      +#+    +#+             +#+    
  #+#             #+#    #+#       #+#    #+#      #+#          #+#   #+#+#      #+#    #+#      #+#    #+#     
 ###             ###    ###       ###    ###      ###          ###    ####       ########        ########       
-
-                          Copyright(C) 2025 github.com/phrynus  All Rights Reserved.`
+Copyright(C) 2025 github.com/phrynus  All Rights Reserved.`
       );
     });
 };
