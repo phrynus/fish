@@ -67,8 +67,7 @@ export default {
     code: t.Number(),
     msg: t.String()
   }),
-  run: async (data: any, ctx: any = {}) => {
-    // 判断 data 是否为对象
+  run: async (data: any) => {
     const c: any = {
       code: 500,
       msg: "success"
@@ -79,6 +78,7 @@ export default {
         let msg = StatusMap[c.code]; // 获取状态码对应的描述
         c.msg = data.msg || msg || "success";
         c.data = c.code === 200 ? data.data || data : {};
+        if (Object.keys(c.data).length === 0) delete c.data;
         break;
       case "string":
         c.code = 500;

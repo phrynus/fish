@@ -1,42 +1,55 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
+import routerH from "@/utils/routerH";
 import cryptoJs from "crypto-js";
 import { v4 as uuidv4 } from "uuid";
 import { mysql, sqlite } from "@/config";
 export default new Elysia({ prefix: "/users" })
-  .post("/", async ({ query, ip, jwt }) => {
-    const { username, password, email } = query;
-    const emailReg = /^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/;
-    const usernameReg = /^[a-zA-Z0-9_]{3,16}$/;
-    try {
-      if (!username || !password || !email) throw new Error("请输入用户名、密码和邮箱");
-      if (!emailReg.test(email)) throw new Error("邮箱格式不正确");
-      if (!usernameReg.test(username)) throw new Error("用户名格式不正确，长度为3-16位，只能包含字母、数字、下划线");
-      if (password.length < 6) throw new Error("密码长度不能小于6位");
-      const c_params = [
-        uuidv4(),
-        username,
-        cryptoJs.SHA256(password).toString(),
-        email,
-        1,
-        ip,
-        JSON.stringify({
-          number: 3,
-          mac: []
-        })
-      ];
-      const sql = `INSERT INTO users (uuid, username, password, email, status, reg_ip, reg_mac) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-      await mysql.execute(sql, c_params);
-      // 循环匹配
-      return "ok";
-    } catch (error: any) {
-      [{ pattern: /Duplicate entry '[a-zA-Z0-9_]{3,16}' for key 'users.username'/, msg: "用户名已被使用" }].forEach(
-        ({ pattern, msg }) => {
-          if (pattern.test(error.message)) throw new Error(msg);
-        }
-      );
-      return error;
+  .post("/", async (ctx) => "a", {
+    query: t.Object({
+      app: t.String(),
+      name: t.String(),
+      password: t.String()
+    }),
+    response: {
+      200: t.Object({}),
+      500: routerH.error,
+      400: routerH.error
     }
-  })
+  }) // 创建用户
+  .post(
+    "/email",
+    async (ctx) => {
+      const { email } = ctx.query;
+      // 正则邮箱是否正确
+      const reg = /^[A-Za-z0-9\u4e00-\u9fa5]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/;
+      if (!reg.test(email)) {
+        return routerH.run({
+          code: 400,
+          mse: "邮箱格式不正确"
+        });
+      }
+      const iteEmail =
+        sqlite
+          .query(`SELECT * FROM user_email WHERE email='1' AND strftime('%s', 'now') * 1000 - expire <= 60 * 1000`)
+          .run(email) || [];
+      if (iteEmail.length > 0) {
+        return routerH.run({
+          code: 400,
+          mse: "请勿频繁发送验证码"
+        });
+      }
+    },
+    {
+      query: t.Object({
+        email: t.String()
+      }),
+      response: {
+        200: t.Object({}),
+        500: routerH.error,
+        400: routerH.error
+      }
+    }
+  )
   .get("/", async ({}) => "获取用户列表")
   .get("/:id", async () => "获取用户信息")
   .put("/:id", async () => "更新用户信息")

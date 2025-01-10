@@ -85,8 +85,9 @@ export default new Elysia({ prefix: `/${secret.hex.slice(0, 6)}` })
     "/ref",
     async (ctx) => {
       try {
-        let { token } = ctx.query;
-        if (!(await ctx.ref.verify(token))) {
+        const { token } = ctx.query;
+        const verify = await ctx.ref.verify(token);
+        if (!verify) {
           return routerH.run(400);
         }
         const access = await ctx.acc.sign({
